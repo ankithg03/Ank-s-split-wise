@@ -20,7 +20,7 @@ interface Member {
 interface ExpenseData {
   amount: number;
   description: string;
-  groupId: string;
+  groupId?: string;
   splitPercentage: number;
   splitWith: SplitMember[];
   splitType?: "Equally" | "Indivually";
@@ -44,6 +44,13 @@ interface Expense {
     name: string;
     splitAmount: number;
   }[];
+}
+
+interface GroupData {
+  id?: string;
+  name: string;
+  created_by: string;
+  members: string[];
 }
 
 export async function addExpense(expenseData: ExpenseData) {
@@ -204,5 +211,85 @@ export async function importExpenses(groupId: string, expenses: any[]) {
   } catch (error) {
     console.error('Error importing expenses:', error);
     throw error;
+  }
+}
+
+export async function createGroup(groupData: GroupData) {
+  const { name, created_by, members } = groupData;
+
+  try {
+    const result = await sql`
+      INSERT INTO groups (name, created_by, members, admins)
+      VALUES (${name}, ${created_by}, ${JSON.stringify(members)}, ${JSON.stringify(members)})
+      RETURNING id
+    `;
+    return { success: true, groupId: result[0].id };
+  } catch (error) {
+    console.error('Error creating group:', error);
+    return { success: false, error: 'Failed to create group' };
+  }
+}
+
+export async function getGroupDetails(groupId: string) {
+  try {
+    const result = await sql`
+      SELECT * FROM groups
+      WHERE id = ${groupId}
+    `;
+
+    if (result.length === 0) {
+      return { success: false, error: 'Group not found' };
+    }
+
+    return { success: true, group: result[0] };
+  } catch (error) {
+    console.error('Error fetching group details:', error);
+    return { success: false, error: 'Failed to fetch group details' };
+  }
+}
+
+export async function updateGroup(groupId: string, updateData: Partial<GroupData>) {
+  const { name, members } = updateData;
+
+  try {
+    await sql`
+      UPDATE groups
+      SET name = COALESCE(${name}, name),
+          members = COALESCE(${JSON.stringify(members)}, members)
+      WHERE id = ${groupId}
+    `;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating group:', error);
+    return { success: false, error: 'Failed to update group' };
+  }
+}
+
+export async function deleteGroup(groupId: string) {
+  try {
+    await sql`
+      DELETE FROM groups
+      WHERE id = ${groupId}
+    `;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting group:', error);
+    return { success: false, error: 'Failed to delete group' };
+  }
+}
+
+export async function getUserGroups(userId: string) {
+  try {
+    const result = await sql`
+    SELECT * FROM groups 
+    WHERE admins LIKE ${'%' + userId + '%'};
+  `;
+
+    return { success: true, groups: result };
+  } catch (error) {
+    console.error('Error fetching user groups:', error);
+    return { success: false, error: 'Failed to fetch user groups' };
   }
 }

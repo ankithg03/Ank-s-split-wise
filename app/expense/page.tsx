@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -13,23 +15,20 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useOrganization, useOrganizationList, useUser } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import React, { useEffect, useState } from 'react';
-import { addExpense } from '../actions';
+import { addExpense, getGroupDetails } from '../actions'; // inviteUserToGroup
 import { useParams } from 'next/navigation';
 import Back from '@/components/Icons/Back';
 
 
 // ... (rest of the code remains unchanged)
 
-interface Organization {
-  id: string;
-  name: string;
-}
-
 interface Member {
   id: string;
   name: string;
+  email?: string;
+  status?: string;
 }
 
 interface SplitMember {
@@ -39,74 +38,57 @@ interface SplitMember {
 
 export const AddExpense = () => {
   const { id } = useParams();
-  console.log('aaa', id)
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [group, setGroup] = useState('');
+  const [group, setGroup] = useState<{ id: string; name: string } | null>(null);
   const [splitPercentage, setSplitPercentage] = useState('100');
   const [splitWith, setSplitWith] = useState<SplitMember[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [paidBy, setPaidBy] = useState<Member | undefined>();
   const { user, isLoaded: isUserLoaded } = useUser();
-  const { userMemberships, isLoaded: isOrgListLoaded } = useOrganizationList({
-    userMemberships: true,
-  });
-  const { isLoaded: isOrgLoaded } = useOrganization();
   const { toast } = useToast();
   const [splitType, setSplitType] = useState<'Equally' | 'Indivually'>('Equally');
   const [individualSplits, setIndividualSplits] = useState<{ [key: string]: number }>({});
+  // const [inviteEmail, setInviteEmail] = useState('');
+  // const [inviteName, setInviteName] = useState('');
 
   useEffect(() => {
-    if (isOrgListLoaded && userMemberships.data) {
-      const orgs = userMemberships.data.map((membership) => ({
-        id: membership.organization.id,
-        name: membership.organization.name,
-      }));
-      console.log('Organizations fetched:', orgs);
-      setOrganizations(orgs);
-
-      // Set the first organization as default and fetch its members
-      if (orgs.length > 0 && !group) {
-        const defaultOrgId = orgs[0].id;
-        setGroup(defaultOrgId);
-        fetchMembers(defaultOrgId);
-      }
+    if (id) {
+      fetchGroupDetails(id as string);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOrgListLoaded, userMemberships.data, group]);
+  }, [id]);
 
-  const fetchMembers = async (orgId: string) => {
+  const fetchGroupDetails = async (groupId: string) => {
     try {
-      const org = await userMemberships.data?.find(
-        (membership) => membership.organization.id === orgId
-      )?.organization;
-      if (org) {
-        const memberships = await org.getMemberships();
-        const membersList = memberships.data.map((membership) => ({
-          id: membership.publicUserData.userId ?? '',
-          name: `${membership.publicUserData.firstName ?? ''} ${
-            membership.publicUserData.lastName ?? ''
-          }`.trim(),
+      const result = await getGroupDetails(groupId);
+      if (result.success && result.group) {
+        setGroup({ id: result.group.id, name: result.group.name });
+        const membersList = result.group.members.map((memberId: string) => ({
+          id: memberId,
+          name: memberId, // You might want to fetch actual names if available
         }));
         setMembers(membersList);
-        console.log('Members fetched:', membersList);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch group details. Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      console.error('Error fetching members:', error);
+      console.error('Error fetching group details:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch group members. Please try again.',
+        description: 'Failed to fetch group details. Please try again.',
         variant: 'destructive',
       });
     }
   };
 
-  const handleGroupChange = (orgId: string) => {
-    setGroup(orgId);
-    fetchMembers(orgId);
-    setSplitWith([]); // Reset split with when group changes
-  };
+  // const handleGroupChange = (orgId: string) => {
+  //   setGroup({ id: orgId, name: orgId });
+  //   setSplitWith([]); // Reset split with when group changes
+  // };
 
   const handleIndividualSplitChange = (memberId: string, amount: string) => {
     setIndividualSplits(prev => ({
@@ -130,7 +112,7 @@ export const AddExpense = () => {
     const expenseData = {
       amount: parseFloat(amount),
       description,
-      groupId: group,
+      groupId: group?.id,
       splitType,
       splitPercentage: splitType === 'Equally' ? parseFloat(splitPercentage) : 0,
       splitWith: splitType === 'Equally' 
@@ -152,7 +134,7 @@ export const AddExpense = () => {
         // Reset form
         setAmount('');
         setDescription('');
-        setGroup('');
+        setGroup(null);
         setSplitPercentage('');
         setSplitWith([]);
       } else {
@@ -168,7 +150,39 @@ export const AddExpense = () => {
     }
   };
 
-  if (!isUserLoaded || !isOrgListLoaded || !isOrgLoaded) {
+  // const handleInviteUser = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (!group || !inviteEmail || !inviteName) return;
+
+  //   try {
+  //     const result = await inviteUserToGroup(group.id, inviteEmail, inviteName);
+  //     if (result.success) {
+  //       toast({
+  //         title: 'Success',
+  //         description: `Invitation sent to ${inviteEmail}`,
+  //       });
+  //       setInviteEmail('');
+  //       setInviteName('');
+  //       // Refresh group details to update the members list
+  //       fetchGroupDetails(group.id);
+  //     } else {
+  //       toast({
+  //         title: 'Error',
+  //         description: result.error || 'Failed to invite user. Please try again.',
+  //         variant: 'destructive',
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error('Error inviting user:', error);
+  //     toast({
+  //       title: 'Error',
+  //       description: 'Failed to invite user. Please try again.',
+  //       variant: 'destructive',
+  //     });
+  //   }
+  // };
+
+  if (!isUserLoaded) {
     return <div>Loading...</div>;
   }
 
@@ -233,23 +247,10 @@ export const AddExpense = () => {
           >
             Group
           </Label>
-          {organizations.length > 0 ? (
-            <Select onValueChange={handleGroupChange} value={group} required>
-              <SelectTrigger id="group" className="w-full">
-                <SelectValue placeholder="Select a group" />
-              </SelectTrigger>
-              <SelectContent>
-                {organizations.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {group ? (
+            <p className="text-sm text-gray-500">{group.name}</p>
           ) : (
-            <p className="text-sm text-gray-500">
-              No groups available. Please create or join a group first.
-            </p>
+            <p className="text-sm text-gray-500">Loading group...</p>
           )}
         </div>
 
@@ -370,6 +371,49 @@ export const AddExpense = () => {
           Save Expense
         </Button>
       </form>
+
+      {/* <div className="mt-8">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Invite User to Group</h3>
+        <form onSubmit={handleInviteUser} className="space-y-4">
+          <div>
+            <Label htmlFor="inviteEmail" className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </Label>
+            <Input
+              type="email"
+              id="inviteEmail"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="inviteName" className="block text-sm font-medium text-gray-700 mb-1">
+              Name
+            </Label>
+            <Input
+              type="text"
+              id="inviteName"
+              value={inviteName}
+              onChange={(e) => setInviteName(e.target.value)}
+              required
+            />
+          </div>
+          <Button type="submit">Invite User</Button>
+        </form>
+      </div> */}
+
+      <div className="mt-8">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Group Members</h3>
+        <ul className="space-y-2">
+          {members.map((member) => (
+            <li key={member.id} className="flex items-center justify-between">
+              <span>{member.name} ({member?.email})</span>
+              <span className="text-sm text-gray-500">{member?.status}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

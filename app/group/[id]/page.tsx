@@ -1,10 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 'use client';
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
-import { useOrganizationList, useUser } from '@clerk/nextjs';
-import { getGroupData, deleteExpense, exportExpenses, importExpenses } from '@/app/actions';
+import { useUser } from '@clerk/nextjs';
+import { getGroupData, deleteExpense, exportExpenses, importExpenses, getGroupDetails } from '@/app/actions';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -37,24 +39,39 @@ const formatAmount = (amount: number | string) => {
   return numAmount.toFixed(2);
 };
 
+interface Group {
+  id: string;
+  name: string;
+  created_by: string;
+  members: string[];
+}
+
 function GroupPage() {
   const { id } = useParams();
-  const { userMemberships, isLoaded: orgLoaded } = useOrganizationList({
-    userMemberships: {
-      infinite: true,
-    },
-  });
   const { user, isLoaded: userLoaded } = useUser();
   const router = useRouter();
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balances, setBalances] = useState<Balance[]>([]);
+  const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     async function fetchData() {
       if (id && user) {
+        const groupResult: any = await getGroupDetails(id as string);
+        if (groupResult.success && groupResult?.group) {
+          setGroup(groupResult?.group);
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Failed to load group details',
+            variant: 'destructive',
+          });
+          return;
+        }
+
         const { expenses, balances } = await getGroupData(
           id as string,
           user.fullName || 'You'
@@ -67,9 +84,9 @@ function GroupPage() {
     if (userLoaded) {
       fetchData();
     }
-  }, [id, user, userLoaded]);
-
-  if (!orgLoaded || !userLoaded || loading) {
+  }, [id, user, userLoaded, toast]);
+  console.log('aaa group', group)
+  if (!userLoaded || loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <p className="text-xl text-gray-600">Loading...</p>
@@ -77,18 +94,13 @@ function GroupPage() {
     );
   }
 
-  const selectedOrganization = userMemberships.data?.find(
-    (membership) => membership.organization.id === id
-  );
-
-  if (!selectedOrganization) {
-    return <div>Organization not found</div>;
+  if (!group) {
+    return <div>Group not found</div>;
   }
 
-  // Update the isAdmin check to match the groups page
-  const isAdmin = selectedOrganization?.role === 'org:admin';
+  const isAdmin = group.created_by === user?.id;
 
-  console.log('Selected Organization:', selectedOrganization);
+  console.log('Group:', group);
   console.log('Is Admin:', isAdmin);
 
   const groupDescription =
@@ -194,22 +206,20 @@ function GroupPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold mb-4">
-          {selectedOrganization.organization.name}
-        </h1>
+        <h1 className="text-3xl font-bold mb-4">{group.name}</h1>
 
-       <div className='flex gap-4'>
+        <div className='flex gap-4'>
           <Link href="/groups">
-              <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
-                All Groups
-              </Button>
-            </Link>
-            <Link href={"/expense/"+id}>
-              <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
-                Add Expense
-              </Button>
-            </Link>
-       </div>
+            <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
+              All Groups
+            </Button>
+          </Link>
+          <Link href={"/expense/"+id}>
+            <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
+              Add Expense
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <p className="text-gray-600 mb-8">{groupDescription}</p>

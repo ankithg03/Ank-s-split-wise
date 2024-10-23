@@ -3,10 +3,11 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useOrganizationList, useUser } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs'; //useOrganizationList, 
 import { PlusCircle } from 'lucide-react';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createGroup } from '@/app/actions';
 
 export default function CreateGroup() {
   const [groupName, setGroupName] = useState('');
@@ -14,10 +15,10 @@ export default function CreateGroup() {
   const [invitedMembers, setInvitedMembers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
-  const { createOrganization } = useOrganizationList();
+  // const { createOrganization } = useOrganizationList();
   const { toast } = useToast();
   const router = useRouter();
-
+  const currentUserEmail = user?.primaryEmailAddress?.emailAddress
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -31,26 +32,23 @@ export default function CreateGroup() {
 
     setIsLoading(true);
     try {
-      if (!createOrganization) {
-        throw new Error('createOrganization function is undefined');
-      }
-      const organization = await createOrganization({ name: groupName });
+      const groupData = {
+        name: groupName,
+        created_by: user.id,
+        members: [String(`${user.fullName} - ${currentUserEmail}`), ...invitedMembers.map(email => email)], // Assuming email is used as ID
+      };
 
-      // Invite members
-      for (const email of invitedMembers) {
-        await organization.inviteMember({
-          emailAddress: email,
-          role: 'org:member',
+      const { success, groupId, error } = await createGroup(groupData);
+
+      if (success && groupId) {
+        toast({
+          title: 'Success',
+          description: 'Group created successfully!',
         });
+        router.push(`/group/${groupId}`);
+      } else {
+        throw new Error(error || 'Failed to create group');
       }
-
-      toast({
-        title: 'Success',
-        description: 'Group created successfully!',
-      });
-
-      // Redirect to the new group page
-      router.push(`/group/${organization.id}`);
     } catch (error) {
       console.error('Error creating group:', error);
       toast({
@@ -74,7 +72,7 @@ export default function CreateGroup() {
     <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8 max-w-2xl">
       <h1 className="text-2xl font-bold mb-2">Create a group</h1>
       <p className="text-gray-600 mb-6">
-        Split expenses with friends, roommates, and more.
+        {'Split expenses with friends, roommates, and more.'}
       </p>
 
       <form onSubmit={handleCreateGroup} className="space-y-6">
