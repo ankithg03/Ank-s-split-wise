@@ -278,7 +278,7 @@ export const AddExpense = () => {
             Paid By
           </Label>
           <Select onValueChange={(value)=>{
-            const paidBy = members.find(member=>member.id)
+            const paidBy = members.find(member=>member.id==value)
             setPaidBy(paidBy)
           }} value={paidBy?.id} required>
             <SelectTrigger id="paidBy" className="w-full">
