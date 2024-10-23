@@ -15,8 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 // Define interfaces for Balance and Expense
 interface Balance {
   name: string;
-  amount: number;
-  owes: boolean;
+  owes: { amount: number }[];
+  gets: { from: string; amount: number }[];
 }
 
 interface Expense {
@@ -73,11 +73,11 @@ function GroupPage() {
         }
 
         const { expenses, balances } = await getGroupData(
-          id as string,
-          user.fullName || 'You'
+          id as string
         );
-        setExpenses(expenses);
-        setBalances(balances);
+        console.log('aaa>> Expenses', expenses, balances)
+        setExpenses(expenses as Expense[]);
+        setBalances(balances as Balance[]);
         setLoading(false);
       }
     }
@@ -85,7 +85,6 @@ function GroupPage() {
       fetchData();
     }
   }, [id, user, userLoaded, toast]);
-  console.log('aaa group', group)
   if (!userLoaded || loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -100,19 +99,28 @@ function GroupPage() {
 
   const isAdmin = group.created_by === user?.id;
 
-  console.log('Group:', group);
-  console.log('Is Admin:', isAdmin);
 
   const groupDescription =
     "View and manage the details of your group. You can see the group's name, balances, and expenses. As an admin, you can also delete expenses.";
 
   const getInitials = (name: string): string => {
-    return name
-      .split(' ')
-      .map((word) => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    // Remove the email part if it exists
+    console.log('aaa ... >', name)
+    const namePart = name?.split('-')[0].trim();
+    
+    const words = namePart?.split(' ');
+    
+    if (words?.length === 1) {
+      // If there's only one word, return the first two letters
+      return namePart.slice(0, 2).toUpperCase();
+    } else {
+      // If there are multiple words, return the first letter of each word
+      return words
+        ?.map((word) => word[0])
+        ?.join('')
+        ?.toUpperCase()
+        ?.slice(0, 2);
+    }
   };
 
   const getRandomColor = (): string => {
@@ -144,9 +152,9 @@ function GroupPage() {
       if (result.success) {
         // Refresh the page data
         const { expenses: updatedExpenses, balances: updatedBalances } =
-          await getGroupData(id as string, user?.fullName || 'You');
-        setExpenses(updatedExpenses);
-        setBalances(updatedBalances);
+          await getGroupData(id as string);
+        setExpenses(updatedExpenses as Expense[]);
+        setBalances(updatedBalances as Balance[]);
         router.refresh(); // Refresh the page to update any server-side rendered content
       } else {
         toast({ title: 'Failed to delete expense. Please try again.' });
@@ -192,15 +200,82 @@ function GroupPage() {
           toast({ title: 'Data imported successfully' });
           // Refresh the page data
           const { expenses: updatedExpenses, balances: updatedBalances } =
-            await getGroupData(id as string, user?.fullName || 'You');
-          setExpenses(updatedExpenses);
-          setBalances(updatedBalances);
+            await getGroupData(id as string);
+          setExpenses(updatedExpenses as Expense[]);
+          setBalances(updatedBalances as Balance[]);
         } catch (error) {
           toast({ title: 'Error importing data' + `, error: ${error}`, variant: 'destructive' });
         }
       };
       reader.readAsText(file);
     }
+  };
+
+  const renderBalances = () => {
+    const balanceEntries = Object.entries(balances);
+    if (balanceEntries.length === 0) {
+      return (
+        <p className="text-gray-600 mb-8">
+          🌟 No outstanding balances. Everyone&apos;s all squared up! 🎉
+        </p>
+      );
+    }
+    return balanceEntries?.map(([name, balance], index) => {
+      const totalOwes = Object.values(balance.owes).reduce((sum, amount) => sum + (amount as any), 0);
+      const totalGets = Object.values(balance.gets).reduce((sum, amount) => sum + (amount as any), 0);
+      const netBalance = totalGets - totalOwes;
+
+      if (netBalance === 0) return null; // Don't render if the balance is zero
+
+      const isPositive = netBalance > 0;
+      const absBalance = Math.abs(netBalance);
+
+      return (
+        <Card key={index} className="mb-4">
+          <CardContent className="p-6">
+            <div className="flex items-center mb-4">
+              <div
+                className={`h-10 w-10 ${getRandomColor()} rounded-full mr-4 flex items-center justify-center text-white font-semibold`}
+              >
+                {getInitials(name!)}
+              </div>
+              <div>
+                <h3 className="font-semibold">{name}</h3>
+                <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                  Net Balance: {isPositive ? 'Gets' : 'Owes'} ₹{formatAmount(absBalance)}
+                </p>
+              </div>
+            </div>
+            
+            {Object.keys(balance.owes).length > 0 && (
+              <div className="mb-2">
+                <p className="font-semibold text-sm">Owes:</p>
+                <ul className="list-disc list-inside">
+                  {Object.entries(balance.owes).map(([owesTo, amount], idx) => (
+                    <li key={idx} className="text-sm text-red-600">
+                      ₹{formatAmount(amount as any)} to {owesTo}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            {Object.keys(balance.gets).length > 0 && (
+              <div>
+                <p className="font-semibold text-sm">Gets:</p>
+                <ul className="list-disc list-inside">
+                  {Object.entries(balance.gets).map(([getsFrom, amount], idx) => (
+                    <li key={idx} className="text-sm text-green-600">
+                      ₹{formatAmount(amount as any)} from {getsFrom}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      );
+    });
   };
 
   return (
@@ -221,33 +296,10 @@ function GroupPage() {
           </Link>
         </div>
       </div>
-
       <p className="text-gray-600 mb-8">{groupDescription}</p>
 
       <h2 className="text-2xl font-semibold mb-4">Balances</h2>
-      {balances.length > 0 ? (
-        balances.map((balance, index) => (
-          <Card key={index} className="mb-8">
-            <CardContent className="flex items-center p-6">
-              <div
-                className={`h-10 w-10 ${getRandomColor()} rounded-full mr-4 flex items-center justify-center text-white font-semibold`}
-              >
-                {getInitials(balance.name)}
-              </div>
-              <div>
-                <h3 className="font-semibold">{balance.name}</h3>
-                <p className="text-sm text-gray-600">
-                  you owe ₹{formatAmount(balance.amount)} to {balance.name}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))
-      ) : (
-        <p className="text-gray-600 mb-8">
-          🌟 No outstanding balances. Everyone&apos;s all squared up! 🎉
-        </p>
-      )}
+      {renderBalances()}
 
       <h2 className="text-2xl font-semibold mb-4">Expenses</h2>
       {expenses.length > 0 ? (
@@ -258,14 +310,14 @@ function GroupPage() {
                 <div
                   className={`h-10 w-10 ${getRandomColor()} rounded-full mr-4 flex items-center justify-center text-white font-semibold`}
                 >
-                  {getInitials(expense.description)}
+                  {getInitials(expense.description!)}
                 </div>
                 <div>
                   <h3 className="font-semibold">{expense.description}</h3>
                   <p className="text-sm text-gray-600">
                     Paid :₹{formatAmount(expense.amount)} ·
                     <div>
-                      {expense.split_with.map((s) => (<div key={s.id}>{s.name} - {s.splitAmount}</div>))}
+                      {expense.split_with.map((s) => (<div key={s.id}>{s.name} -  ₹{formatAmount(s.splitAmount)}</div>))}
                     </div>
                   </p>
                   <p className="text-xs text-gray-500">

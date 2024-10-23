@@ -27,11 +27,6 @@ interface ExpenseData {
   createdBy: string;
   paidBy: Member | undefined;
 }
-interface Balance {
-  name: string;
-  amount: number;
-  owes: boolean;
-}
 
 interface Expense {
   id: string;
@@ -51,6 +46,13 @@ interface GroupData {
   name: string;
   created_by: string;
   members: string[];
+}
+
+interface TransactionRecord {
+  [email: string]: {
+    owes: { [email: string]: number };
+    gets: { [email: string]: number };
+  };
 }
 
 export async function addExpense(expenseData: ExpenseData) {
@@ -75,16 +77,6 @@ export async function addExpense(expenseData: ExpenseData) {
       splitAmount: member.amount ?? splitAmount,
     }));
 
-    console.log('aaa>>', `
-    INSERT INTO expenses (
-      amount, description, group_id, split_percentage, created_by, split_with, paid_by
-    )
-    VALUES (
-      ${amount}, ${description}, ${groupId}, ${splitPercentage}, ${createdBy}, ${JSON.stringify(
-    splitWithInfo
-  )}, ${JSON.stringify(paidBy)}
-    )
-  `)
     // Insert the expense
     await sql`
       INSERT INTO expenses (
@@ -105,69 +97,85 @@ export async function addExpense(expenseData: ExpenseData) {
   }
 }
 
-export async function getGroupData(groupId: string, userName: string) {
+function calculateIndividualShares(expenses: Expense[]): TransactionRecord {
+  const transactions: TransactionRecord = {};
+
+  expenses.forEach(expense => {
+      const paidByEmail = JSON.parse(expense.paid_by).id; // Parse the JSON string to get the email
+      const splitAmount = expense.split_with;
+
+      splitAmount.forEach(participant => {
+          const participantEmail = participant.id;
+          const amount = participant.splitAmount;
+
+          // Exclude the person who paid
+          if (participantEmail === paidByEmail) return;
+
+          // Initialize transaction records if not present
+          if (!transactions[participantEmail]) {
+              transactions[participantEmail] = { owes: {}, gets: {} };
+          }
+
+          // Participant owes the payer
+          if (!transactions[participantEmail].owes[paidByEmail]) {
+              transactions[participantEmail].owes[paidByEmail] = 0;
+          }
+          transactions[participantEmail].owes[paidByEmail] += amount;
+
+          // Payer gets from the participant
+          if (!transactions[paidByEmail]) {
+              transactions[paidByEmail] = { owes: {}, gets: {} };
+          }
+          if (!transactions[paidByEmail].gets[participantEmail]) {
+              transactions[paidByEmail].gets[participantEmail] = 0;
+          }
+          transactions[paidByEmail].gets[participantEmail] += amount;
+      });
+  });
+
+  // Calculate net amounts and adjust "owes" and "gets"
+  for (const email in transactions) {
+      const owes = transactions[email].owes;
+      const gets = transactions[email].gets;
+
+      for (const owedTo in owes) {
+          const totalOwed = owes[owedTo] || 0;
+          const totalReceived = gets[owedTo] || 0;
+
+          // Transfer the net amount to either "owes" or "gets"
+          if (totalOwed > totalReceived) {
+              transactions[email].owes[owedTo] = totalOwed - totalReceived;
+              delete transactions[email].gets[owedTo]; // Remove gets entry
+          } else if (totalReceived > totalOwed) {
+              transactions[email].gets[owedTo] = totalReceived - totalOwed;
+              delete transactions[email].owes[owedTo]; // Remove owes entry
+          } else {
+              // If they are equal, clear both
+              delete transactions[email].owes[owedTo];
+              delete transactions[email].gets[owedTo];
+          }
+      }
+  }
+
+  return transactions;
+}
+
+export async function getGroupData(groupId: string) {
   try {
-    const expenses = (await sql`
+    const expenses = await sql`
       SELECT id, amount, description, created_by, split_with, paid_by, split_percentage
       FROM expenses
       WHERE group_id = ${groupId}
       ORDER BY created_at DESC
-    `) as Expense[];
+    `;
 
-    const balances: Balance[] = [];
-    const balanceMap = new Map<string, { amount: number; name: string }>();
-
-    expenses.forEach((expense) => {
-      const creatorSplit =
-        expense.amount -
-        expense.split_with.reduce(
-          (sum: number, member: { splitAmount: number }) =>
-            sum + member.splitAmount,
-          0
-        );
-
-      // Get creator's name from split_with
-      const creatorName =
-        expense.split_with.find(
-          (m: { name: string }) => m.name === expense.created_by
-        )?.name || 'Unknown';
-
-      // Update creator's balance
-      const creatorBalance = balanceMap.get(expense.created_by) || {
-        amount: 0,
-        name: creatorName,
-      };
-      creatorBalance.amount += creatorSplit;
-      balanceMap.set(expense.created_by, creatorBalance);
-      // Update split members' balances
-      expense.split_with.forEach(
-        (member: { name: string; splitAmount: number }) => {
-          const memberBalance = balanceMap.get(member.name) || {
-            amount: 0,
-            name: member.name,
-          };
-          memberBalance.amount -= member.splitAmount;
-          balanceMap.set(member.name, memberBalance);
-        }
-      );
-    });
-
-    balanceMap.forEach(({ amount, name }) => {
-      if (name !== userName && amount < 0) {
-        balances.push({
-          name,
-          amount: Math.abs(amount),
-          owes: true,
-        });
-      }
-    });
-
-    return { expenses, balances };
+    return { expenses, balances: calculateIndividualShares(expenses as Expense[]) };
   } catch (error) {
     console.error('Error fetching group data:', error);
-    return { expenses: [], balances: [] };
+    return { expenses: [], balances: [], currentUserOwes: 0 };
   }
 }
+
 
 export async function deleteExpense(expenseId: string) {
   try {
