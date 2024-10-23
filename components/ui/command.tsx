@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-interface */
-
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 "use client"
 
 import * as React from "react"
