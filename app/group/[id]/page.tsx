@@ -17,12 +17,6 @@ interface Balance {
   owes: boolean;
 }
 
-
-interface Member {
-  id: string;
-  name: string;
-}
-
 interface Expense {
   id: string;
   amount: number;
@@ -190,7 +184,7 @@ function GroupPage() {
           setExpenses(updatedExpenses);
           setBalances(updatedBalances);
         } catch (error) {
-          toast({ title: 'Error importing data', variant: 'destructive' });
+          toast({ title: 'Error importing data' + `, error: ${error}`, variant: 'destructive' });
         }
       };
       reader.readAsText(file);
@@ -261,7 +255,7 @@ function GroupPage() {
                   <p className="text-sm text-gray-600">
                     Paid :₹{formatAmount(expense.amount)} ·
                     <div>
-                      {expense.split_with.map((s) => (<div>{s.name} - {s.splitAmount}</div>))}
+                      {expense.split_with.map((s) => (<div key={s.id}>{s.name} - {s.splitAmount}</div>))}
                     </div>
                   </p>
                   <p className="text-xs text-gray-500">

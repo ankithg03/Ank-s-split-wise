@@ -108,12 +108,6 @@ export const AddExpense = () => {
     setSplitWith([]); // Reset split with when group changes
   };
 
-  const handleSplitTypeChange = (value: 'Equally' | 'Indivually') => {
-    setSplitType(value);
-    setSplitPercentage('100');
-    setIndividualSplits({});
-  };
-
   const handleIndividualSplitChange = (memberId: string, amount: string) => {
     setIndividualSplits(prev => ({
       ...prev,
