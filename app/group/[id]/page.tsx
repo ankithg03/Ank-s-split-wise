@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Trash2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useOrganizationList, useUser } from '@clerk/nextjs';
-import { getGroupData, deleteExpense } from '@/app/actions';
+import { getGroupData, deleteExpense, exportExpenses, importExpenses } from '@/app/actions';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,12 @@ interface Balance {
   owes: boolean;
 }
 
+
+interface Member {
+  id: string;
+  name: string;
+}
+
 interface Expense {
   id: string;
   amount: number;
@@ -27,6 +33,8 @@ interface Expense {
     name: string;
     splitAmount: number;
   }[];
+  paid_by: string
+  split_percentage?: number
 }
 
 // Add this utility function at the top of the file, outside the component
@@ -140,6 +148,55 @@ function GroupPage() {
     }
   };
 
+  const handleExportData = async () => {
+    if (!isAdmin) {
+      toast({
+        title: 'Error',
+        description: 'Only admins can export data.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const data = await exportExpenses(id as string);
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `expenses_${id}.json`;
+    a.click();
+  };
+
+  const handleImportData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdmin) {
+      toast({
+        title: 'Error',
+        description: 'Only admins can import data.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const content = e.target?.result as string;
+        try {
+          const data = JSON.parse(content);
+          await importExpenses(id as string, data);
+          toast({ title: 'Data imported successfully' });
+          // Refresh the page data
+          const { expenses: updatedExpenses, balances: updatedBalances } =
+            await getGroupData(id as string, user?.fullName || 'You');
+          setExpenses(updatedExpenses);
+          setBalances(updatedBalances);
+        } catch (error) {
+          toast({ title: 'Error importing data', variant: 'destructive' });
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -147,11 +204,18 @@ function GroupPage() {
           {selectedOrganization.organization.name}
         </h1>
 
-        <Link href="/groups">
-          <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
-            All Groups
-          </Button>
-        </Link>
+       <div className='flex gap-4'>
+          <Link href="/groups">
+              <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
+                All Groups
+              </Button>
+            </Link>
+            <Link href={"/expense/"+id}>
+              <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
+                Add Expense
+              </Button>
+            </Link>
+       </div>
       </div>
 
       <p className="text-gray-600 mb-8">{groupDescription}</p>
@@ -195,17 +259,20 @@ function GroupPage() {
                 <div>
                   <h3 className="font-semibold">{expense.description}</h3>
                   <p className="text-sm text-gray-600">
-                  ₹{formatAmount(expense.amount)} ·
-                    {expense.split_with.map((s) => s.name).join(', ')}
+                    Paid :₹{formatAmount(expense.amount)} ·
+                    <div>
+                      {expense.split_with.map((s) => (<div>{s.name} - {s.splitAmount}</div>))}
+                    </div>
                   </p>
                   <p className="text-xs text-gray-500">
-                    Split type: Percentage{' '}
-                    {(
+                    Split type:
+                    {expense?.split_percentage && expense?.split_percentage>0?` Percentage - ${(
                       (expense.split_with[0]?.splitAmount / expense.amount) *
                       100
-                    ).toFixed(2)}
-                    %
+                    ).toFixed(2)}%`: " Individual"}
+                    
                   </p>
+                  <div className="text-xs text-gray-500">Paid by - {JSON.parse(expense.paid_by ?? '{}')?.name}</div>
                 </div>
               </div>
               <Trash2
@@ -220,6 +287,22 @@ function GroupPage() {
         <p className="text-gray-600 mb-8">
           💸 No expenses yet. Time to split some bills! 🧾
         </p>
+      )}
+      
+      {isAdmin && (
+        <div className="mt-8 flex gap-4">
+          <Button onClick={handleExportData}>Export Data</Button>
+          <label htmlFor="import-data" className="cursor-pointer">
+            <Button>Import Data</Button>
+            <input
+              id="import-data"
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleImportData}
+            />
+          </label>
+        </div>
       )}
     </div>
   );

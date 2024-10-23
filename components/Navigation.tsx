@@ -20,23 +20,23 @@ export default function Navigation() {
           </Link>
           <UserButton />
      </div>
-      <div className="grid w-full md:flex items-center md:space-x-2 mt-2">
+      <div className="grid w-full md:flex items-center gap-2 mt-2">
         {/* Added new link for 'Your Groups' */}
         <Link
           href="/groups"
-          className="text-gray-700 hover:text-gray-900 hover:underline"
+          className="hover:bg-purple-800  bg-purple-600  text-white p-2 rounded-lg"
         >
           Your Groups
         </Link>
         <Link
           href="/group"
-          className="text-gray-700 hover:text-gray-900 hover:underline"
+          className="hover:bg-purple-800  bg-purple-600  text-white p-2 rounded-lg"
         >
           Create Group
         </Link>
         <Link
           href="/expense"
-          className="text-gray-700 hover:text-gray-900 hover:underline"
+          className="hover:bg-purple-800  bg-purple-600  text-white p-2 rounded-lg"
         >
           Add Expense
         </Link>

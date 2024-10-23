@@ -1,0 +1,1 @@
+export {AddExpense as default } from '../page'

@@ -3,6 +3,8 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MultiSelect } from "@/components/ui/multi-select"
+
 import {
   Select,
   SelectContent,
@@ -14,6 +16,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useOrganization, useOrganizationList, useUser } from '@clerk/nextjs';
 import React, { useEffect, useState } from 'react';
 import { addExpense } from '../actions';
+import { useParams } from 'next/navigation';
+import Back from '@/components/Icons/Back';
+
 
 // ... (rest of the code remains unchanged)
 
@@ -32,21 +37,25 @@ interface SplitMember {
   name: string;
 }
 
-export default function AddExpense() {
+export const AddExpense = () => {
+  const { id } = useParams();
+  console.log('aaa', id)
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [group, setGroup] = useState('');
-  const [splitPercentage, setSplitPercentage] = useState('');
+  const [splitPercentage, setSplitPercentage] = useState('100');
   const [splitWith, setSplitWith] = useState<SplitMember[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-
+  const [paidBy, setPaidBy] = useState<Member | undefined>();
   const { user, isLoaded: isUserLoaded } = useUser();
   const { userMemberships, isLoaded: isOrgListLoaded } = useOrganizationList({
     userMemberships: true,
   });
   const { isLoaded: isOrgLoaded } = useOrganization();
   const { toast } = useToast();
+  const [splitType, setSplitType] = useState<'Equally' | 'Indivually'>('Equally');
+  const [individualSplits, setIndividualSplits] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
     if (isOrgListLoaded && userMemberships.data) {
@@ -99,6 +108,19 @@ export default function AddExpense() {
     setSplitWith([]); // Reset split with when group changes
   };
 
+  const handleSplitTypeChange = (value: 'Equally' | 'Indivually') => {
+    setSplitType(value);
+    setSplitPercentage('100');
+    setIndividualSplits({});
+  };
+
+  const handleIndividualSplitChange = (memberId: string, amount: string) => {
+    setIndividualSplits(prev => ({
+      ...prev,
+      [memberId]: parseFloat(amount) || 0
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isUserLoaded || !user) {
@@ -115,12 +137,13 @@ export default function AddExpense() {
       amount: parseFloat(amount),
       description,
       groupId: group,
-      splitPercentage: parseFloat(splitPercentage),
-      splitWith: splitWith.map((member) => ({
-        id: member.id,
-        name: member.name,
-      })),
+      splitType,
+      splitPercentage: splitType === 'Equally' ? parseFloat(splitPercentage) : 0,
+      splitWith: splitType === 'Equally' 
+        ? splitWith.map(member => ({ id: member.id, name: member.name, amount: parseFloat(amount)/(splitWith.length+1) }))
+        : Object.entries(individualSplits).map(([id, amount]) => ({ id, name: members.find(m => m.id === id)?.name || '', amount })),
       createdBy: user.id,
+      paidBy,
     };
 
     try {
@@ -157,7 +180,18 @@ export default function AddExpense() {
 
   return (
     <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-2">Add an expense</h1>
+      <div className='flex mb-2 items-center'>
+        <div 
+          className='overflow-x-hidden -ml-3'
+          role='button'
+          onClick={()=>{
+            if(typeof window !== 'undefined') {
+              window.history.back()
+            }
+          }}
+        ><Back /></div>
+        <h1 className="text-2xl font-bold">Add an expense</h1>
+      </div>
       <p className="text-gray-600 mb-6">
         Record your expenses and split them with your group.
       </p>
@@ -225,7 +259,7 @@ export default function AddExpense() {
           )}
         </div>
 
-        <div>
+        {/* <div>
           <Label
             htmlFor="splitPercentage"
             className="block text-sm font-medium text-gray-700 mb-1"
@@ -240,41 +274,21 @@ export default function AddExpense() {
             onChange={(e) => setSplitPercentage(e.target.value)}
             className="w-full"
           />
-        </div>
+        </div> */}
 
         <div>
           <Label
-            htmlFor="splitWith"
+            htmlFor="paidBy"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Split with
+            Paid By
           </Label>
-          <Select
-            onValueChange={(value) => {
-              const selectedMember = members.find(
-                (member) => member.id === value
-              );
-              if (selectedMember) {
-                if (
-                  splitWith.some((member) => member.id === selectedMember.id)
-                ) {
-                  setSplitWith(
-                    splitWith.filter(
-                      (member) => member.id !== selectedMember.id
-                    )
-                  );
-                } else {
-                  setSplitWith([
-                    ...splitWith,
-                    { id: selectedMember.id, name: selectedMember.name },
-                  ]);
-                }
-              }
-            }}
-            disabled={!group}
-          >
-            <SelectTrigger id="splitWith" className="w-full">
-              <SelectValue placeholder="Select members to split with" />
+          <Select onValueChange={(value)=>{
+            const paidBy = members.find(member=>member.id)
+            setPaidBy(paidBy)
+          }} value={paidBy?.id} required>
+            <SelectTrigger id="paidBy" className="w-full">
+              <SelectValue placeholder="Select who paid" />
             </SelectTrigger>
             <SelectContent>
               {members.map((member) => (
@@ -286,6 +300,78 @@ export default function AddExpense() {
           </Select>
         </div>
 
+        <div>
+          <Label
+            htmlFor="splitType"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Split Type
+          </Label>
+          <Select onValueChange={(value: 'Equally' | 'Indivually') => setSplitType(value)} value={splitType}>
+            <SelectTrigger id="splitType" className="w-full">
+              <SelectValue placeholder="Select split type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Equally">Equally</SelectItem>
+              <SelectItem value="Indivually">Indivually</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {splitType === 'Equally' ? (
+          <>
+            <div>
+              <Input
+                id="splitPercentage"
+                type="hidden"
+                placeholder="Enter percentage to split"
+                value={'100%'}
+                onChange={(e) => setSplitPercentage(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <Label
+                htmlFor="splitWith"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Split with
+              </Label>
+              <MultiSelect
+                options={members.map(member => ({ label: member.name, value: member.id }))}
+                // selected={splitWith.map(member => member.id)}
+                onValueChange={(selectedIds) => {
+                  setSplitWith(
+                    members.filter(member => selectedIds.includes(member.id))
+                  );
+                }}
+                placeholder="Select members to split with"
+                disabled={!group}
+              />
+            </div>
+          </>
+        ) : (
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
+              Individual Splits
+            </Label>
+            {members.map(member => (
+              <div key={member.id} className="flex items-center space-x-2 mb-2">
+                <Label htmlFor={`split-${member.id}`} className="w-1/3">{member.name}</Label>
+                <Input
+                  id={`split-${member.id}`}
+                  type="number"
+                  placeholder="Amount"
+                  value={individualSplits[member.id] || ''}
+                  onChange={(e) => handleIndividualSplitChange(member.id, e.target.value)}
+                  className="w-2/3"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
         <Button type="submit" className="w-full">
           Save Expense
         </Button>
@@ -293,3 +379,5 @@ export default function AddExpense() {
     </div>
   );
 }
+
+export default AddExpense
