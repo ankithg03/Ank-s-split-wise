@@ -195,7 +195,7 @@ function GroupPage() {
                 <div>
                   <h3 className="font-semibold">{expense.description}</h3>
                   <p className="text-sm text-gray-600">
-                    ${formatAmount(expense.amount)} ·
+                  ₹{formatAmount(expense.amount)} ·
                     {expense.split_with.map((s) => s.name).join(', ')}
                   </p>
                   <p className="text-xs text-gray-500">

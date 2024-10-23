@@ -173,7 +173,7 @@ export default function AddExpense() {
           <Input
             id="amount"
             type="number"
-            placeholder="$0.00"
+            placeholder="₹0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
