@@ -169,7 +169,7 @@ function GroupPage() {
               <div>
                 <h3 className="font-semibold">{balance.name}</h3>
                 <p className="text-sm text-gray-600">
-                  Owes you ₹{formatAmount(balance.amount)}
+                  you owe ₹{formatAmount(balance.amount)} to {balance.name}
                 </p>
               </div>
             </CardContent>
