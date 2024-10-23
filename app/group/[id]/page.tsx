@@ -75,7 +75,6 @@ function GroupPage() {
         const { expenses, balances } = await getGroupData(
           id as string
         );
-        console.log('aaa>> Expenses', expenses, balances)
         setExpenses(expenses as Expense[]);
         setBalances(balances as Balance[]);
         setLoading(false);
@@ -105,7 +104,6 @@ function GroupPage() {
 
   const getInitials = (name: string): string => {
     // Remove the email part if it exists
-    console.log('aaa ... >', name)
     const namePart = name?.split('-')[0].trim();
     
     const words = namePart?.split(' ');

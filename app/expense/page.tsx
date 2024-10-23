@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 'use client';
 
@@ -17,7 +18,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@clerk/nextjs';
 import React, { useEffect, useState } from 'react';
-import { addExpense, getGroupDetails } from '../actions'; // inviteUserToGroup
+import { addExpense, getGroupDetails, getUserGroups } from '../actions'; // inviteUserToGroup
 import { useParams } from 'next/navigation';
 import Back from '@/components/Icons/Back';
 
@@ -41,6 +42,8 @@ export const AddExpense = () => {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [group, setGroup] = useState<{ id: string; name: string } | null>(null);
+  const [groups, setGroups] = useState<{ id: string; name: string, members?: any }[] | null>(null);
+
   const [splitPercentage, setSplitPercentage] = useState('100');
   const [splitWith, setSplitWith] = useState<SplitMember[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -57,6 +60,26 @@ export const AddExpense = () => {
       fetchGroupDetails(id as string);
     }
   }, [id]);
+  useEffect(()=>{
+    fetchGroupDetailsByUser()
+      
+  }, [id, user])
+
+  const fetchGroupDetailsByUser = async () => {
+    if (!id && user?.emailAddresses?.[0]?.emailAddress) {
+    const result = await getUserGroups(user?.emailAddresses?.[0]?.emailAddress)
+      if (result?.success && result?.groups) {
+        const group = result?.groups?.[0]
+        setGroup({ id: group.id, name: group.name });
+        setGroups(result.groups.map(group=>({ id: group.id, name: group.name, members: group.members })))
+        const membersList = group.members.map((memberId: string) => ({
+          id: memberId,
+          name: memberId, // You might want to fetch actual names if available
+        }));
+        setMembers(membersList);
+      }
+    }
+  }
 
   const fetchGroupDetails = async (groupId: string) => {
     try {
@@ -239,8 +262,37 @@ export const AddExpense = () => {
             className="w-full"
           />
         </div>
+        {groups? ( <div>
+          <Label
+            htmlFor="paidBy"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Groups
+          </Label>
+          <Select onValueChange={(value)=>{
+            const group = groups.find(group=>group.id==value)
+            if (group) {
+              const membersList = group.members.map((memberId: string) => ({
+                id: memberId,
+                name: memberId, // You might want to fetch actual names if available
+              }));
+              setMembers(membersList);
+              setGroup(group)
 
-        <div>
+            }
+          }} value={group?.id} required>
+            <SelectTrigger id="group_by" className="w-full">
+              <SelectValue placeholder="Select Group" />
+            </SelectTrigger>
+            <SelectContent>
+              {groups.map((group) => (
+                <SelectItem key={group.id} value={group.id}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>): (<div>
           <Label
             htmlFor="group"
             className="block text-sm font-medium text-gray-700 mb-1"
@@ -252,7 +304,8 @@ export const AddExpense = () => {
           ) : (
             <p className="text-sm text-gray-500">Loading group...</p>
           )}
-        </div>
+        </div>)}
+        
 
         {/* <div>
           <Label
@@ -408,8 +461,7 @@ export const AddExpense = () => {
         <ul className="space-y-2">
           {members.map((member) => (
             <li key={member.id} className="flex items-center justify-between">
-              <span>{member.name} ({member?.email})</span>
-              <span className="text-sm text-gray-500">{member?.status}</span>
+              <span>{member.name}</span>
             </li>
           ))}
         </ul>
