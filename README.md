@@ -63,6 +63,23 @@ To get started with this project, follow these steps:
    ```
 3. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
+4. Create account on neondb, create database, and table,
+
+```
+CREATE TABLE IF NOT EXISTS expenses (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+amount DECIMAL (10, 2) NOT NULL,
+description TEXT NOT NULL,
+group_id TEXT NOT NULL,
+split_percentage DECIMAL(5, 2),
+created_by TEXT NOT NULL,
+split_with JSONB NOT NULL,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+5. enable group in the clerk
+
 ## Acknowledgements
 
 - [Clerk](https://go.clerk.com/5qOWrFA) for making this project possible
