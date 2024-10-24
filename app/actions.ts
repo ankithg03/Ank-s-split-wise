@@ -46,6 +46,7 @@ interface GroupData {
   name: string;
   created_by: string;
   members: string[];
+  admins: string[];
 }
 
 interface TransactionRecord {
@@ -223,12 +224,12 @@ export async function importExpenses(groupId: string, expenses: any[]) {
 }
 
 export async function createGroup(groupData: GroupData) {
-  const { name, created_by, members } = groupData;
+  const { name, created_by, members, admins } = groupData;
 
   try {
     const result = await sql`
       INSERT INTO groups (name, created_by, members, admins)
-      VALUES (${name}, ${created_by}, ${JSON.stringify(members)}, ${JSON.stringify(members)})
+      VALUES (${name}, ${created_by}, ${JSON.stringify(members)}, ${JSON.stringify(admins)})
       RETURNING id
     `;
     return { success: true, groupId: result[0].id };
@@ -240,10 +241,19 @@ export async function createGroup(groupData: GroupData) {
 
 export async function getGroupDetails(groupId: string) {
   try {
-    const result = await sql`
-      SELECT * FROM groups
-      WHERE id = ${groupId}
-    `;
+    let result = []
+    if (groupId=="default") {
+          result = await sql`
+                    SELECT * FROM groups
+                    WHERE name = ${groupId}
+                  `;
+    } else {
+      result = await sql`
+                SELECT * FROM groups
+                WHERE id = ${groupId}
+              `;
+    }
+   
 
     if (result.length === 0) {
       return { success: false, error: 'Group not found' };

@@ -78,7 +78,7 @@ const YourGroups = () => {
         `}
       </p>
       <div className="space-y-8">
-        {groups.map((group) => (
+        {groups.map((group) => group.name !== 'default' && (
           <GroupItem key={group.id} {...group} />
         ))}
       </div>

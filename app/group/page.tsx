@@ -4,17 +4,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@clerk/nextjs'; //useOrganizationList, 
-import { PlusCircle } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createGroup } from '@/app/actions';
+import { createGroup, getGroupDetails } from '@/app/actions';
+import { MultiSelect } from "@/components/ui/multi-select";
 
 export default function CreateGroup() {
   const [groupName, setGroupName] = useState('');
-  const [inviteEmail, setInviteEmail] = useState('');
   const [invitedMembers, setInvitedMembers] = useState<string[]>([]);
+  const [adminMembers, setAdminMembers] = useState<string[]>([]);
+
+  const [members, setMembers] = useState([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
+  useEffect(()=>{
+    getGroup()
+  }, [])
+  const getGroup = async ()=>{
+    const group = await getGroupDetails('default')
+    const members = group.success ? group?.group?.members : []
+    setMembers(members)
+  }
   // const { createOrganization } = useOrganizationList();
   const { toast } = useToast();
   const router = useRouter();
@@ -32,10 +43,13 @@ export default function CreateGroup() {
 
     setIsLoading(true);
     try {
+      const admins = Array.from(new Set([`${user.fullName} - ${currentUserEmail}`, ...adminMembers]));
+      const members = Array.from(new Set([String(`${user.fullName} - ${currentUserEmail}`), ...invitedMembers.map(email => email)]));
       const groupData = {
         name: groupName,
         created_by: user.id,
-        members: [String(`${user.fullName} - ${currentUserEmail}`), ...invitedMembers.map(email => email)], // Assuming email is used as ID
+        members: members,
+        admins: admins
       };
 
       const { success, groupId, error } = await createGroup(groupData);
@@ -61,11 +75,11 @@ export default function CreateGroup() {
     }
   };
 
-  const handleInvite = () => {
-    if (inviteEmail && !invitedMembers.includes(inviteEmail)) {
-      setInvitedMembers([...invitedMembers, inviteEmail]);
-      setInviteEmail('');
-    }
+  const handleInvite = (selectedMembers: string[]) => {
+    setInvitedMembers(selectedMembers);
+  };
+  const handleAdmin = (selectedMembers: string[]) => {
+    setAdminMembers(selectedMembers);
   };
 
   return (
@@ -97,26 +111,31 @@ export default function CreateGroup() {
 
         <div>
           <label
-            htmlFor="inviteEmail"
+            htmlFor="inviteMembers"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
             Invite members
           </label>
-          <div className="flex space-x-2">
-            <Input
-              id="inviteEmail"
-              name="inviteEmail"
-              type="email"
-              placeholder="Enter email address"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              className="flex-grow"
-            />
-            <Button type="button" onClick={handleInvite} disabled={isLoading}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Invite
-            </Button>
-          </div>
+          <MultiSelect
+            options={members.map(member => ({ label: member, value: member }))}
+            onValueChange={handleInvite}
+            placeholder="Select members to invite"
+            className="w-full"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="adminMembers"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Admin Members
+          </label>
+          <MultiSelect
+            options={members.map(member => ({ label: member, value: member }))}
+            onValueChange={handleAdmin}
+            placeholder="Select members to become admins"
+            className="w-full"
+          />
         </div>
 
         {invitedMembers.length > 0 && (
