@@ -131,7 +131,6 @@ export const AddExpense = () => {
       });
       return;
     }
-
     const expenseData = {
       amount: parseFloat(amount),
       description,
@@ -139,7 +138,7 @@ export const AddExpense = () => {
       splitType,
       splitPercentage: splitType === 'Equally' ? parseFloat(splitPercentage) : 0,
       splitWith: splitType === 'Equally' 
-        ? splitWith.map(member => ({ id: member.id, name: member.name, amount: parseFloat(amount)/(splitWith.length+1) }))
+        ? splitWith.map(member => ({ id: member.id, name: member.name, amount: parseFloat(amount)/(splitWith.length) }))
         : Object.entries(individualSplits).map(([id, amount]) => ({ id, name: members.find(m => m.id === id)?.name || '', amount })),
       createdBy: user.id,
       paidBy,
