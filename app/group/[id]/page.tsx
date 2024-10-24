@@ -136,7 +136,7 @@ function GroupPage() {
     if (!isAdmin) {
       toast({
         title: 'Error 🚨',
-        description: 'Only admins can delete expenses. 🚫',
+        description: 'Only admins can delete expenses. ����',
         variant: 'destructive',
       });
       return;
@@ -233,14 +233,16 @@ function GroupPage() {
           <CardContent className="p-6">
             <div className="flex items-center mb-4">
               <div
-                className={`h-10 w-10 ${getRandomColor()} rounded-full mr-4 flex items-center justify-center text-white font-semibold`}
+                className={`min-w-10	h-10 w-10 ${getRandomColor()} rounded-full mr-4 flex items-center justify-center text-white font-semibold`}
               >
                 {getInitials(name!)}
               </div>
               <div>
-                <h3 className="font-semibold">{name}</h3>
+                <h3 className="font-semibold">{name?.split('-')?.[0]}
+                  <div className='text-xs text-gray-500'>{name?.split('-')?.[1]}</div>
+                </h3>
                 <p className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                  Net Balance: {isPositive ? 'Gets' : 'Owes'} ₹{formatAmount(absBalance)}
+                  <span className='font-semibold'>Summary:</span> {isPositive ? 'Gets' : 'Owes'} ₹{formatAmount(absBalance)}
                 </p>
               </div>
             </div>
@@ -251,7 +253,7 @@ function GroupPage() {
                 <ul className="list-disc list-inside">
                   {Object.entries(balance.owes).map(([owesTo, amount], idx) => (
                     <li key={idx} className="text-sm text-red-600">
-                      ₹{formatAmount(amount as any)} to {owesTo}
+                      ₹{formatAmount(amount as any)} to {owesTo?.split('-')?.[0]}
                     </li>
                   ))}
                 </ul>
@@ -264,7 +266,7 @@ function GroupPage() {
                 <ul className="list-disc list-inside">
                   {Object.entries(balance.gets).map(([getsFrom, amount], idx) => (
                     <li key={idx} className="text-sm text-green-600">
-                      ₹{formatAmount(amount as any)} from {getsFrom}
+                      ₹{formatAmount(amount as any)} from {getsFrom?.split('-')?.[0]}
                     </li>
                   ))}
                 </ul>
@@ -274,6 +276,49 @@ function GroupPage() {
         </Card>
       );
     });
+  };    
+  console.log('aaa',balances)
+
+
+  const renderSimplifiedBalances = () => {
+    const simplifiedBalances: { [key: string]: number } = {};
+
+    // Calculate net balance for each person
+    Object.entries(balances).forEach(([name, balance]) => {
+      const totalOwes = Object.values(balance.owes).reduce((sum, amount) => sum + (amount as any ), 0);
+      const totalGets = Object.values(balance.gets).reduce((sum, amount) => sum + (amount as any ), 0);
+      simplifiedBalances[name] = totalGets - totalOwes;
+    });
+
+    const transactions: { from: string; to: string; amount: number }[] = [];
+
+    // Calculate simplified transactions
+    while (Object.values(simplifiedBalances).some(balance => Math.abs(balance) > 0.01)) {
+      const debtor = Object.entries(simplifiedBalances).find(([, balance]) => balance < -0.01);
+      const creditor = Object.entries(simplifiedBalances).find(([, balance]) => balance > 0.01);
+
+      if (debtor && creditor) {
+        const [debtorName, debtorBalance] = debtor;
+        const [creditorName, creditorBalance] = creditor;
+        const amount = Math.min(Math.abs(debtorBalance), creditorBalance);
+
+        transactions.push({ from: debtorName, to: creditorName, amount });
+
+        simplifiedBalances[debtorName] += amount;
+        simplifiedBalances[creditorName] -= amount;
+      }
+    }
+
+    return (
+      <div>
+        <h3 className="text-xl font-semibold mb-2">Simplified Transactions</h3>
+        {transactions.map((transaction, index) => (
+          <p key={index} className="mb-1">
+            {transaction.from.split('-')[0]} owes ₹{formatAmount(transaction.amount)} to {transaction.to.split('-')[0]}
+          </p>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -313,9 +358,9 @@ function GroupPage() {
                 <div>
                   <h3 className="font-semibold">{expense.description}</h3>
                   <p className="text-sm text-gray-600">
-                    Paid :₹{formatAmount(expense.amount)} ·
+                    Paid: ₹{formatAmount(expense.amount)}
                     <div>
-                      {expense.split_with.map((s) => (<div key={s.id}>{s.name} -  ₹{formatAmount(s.splitAmount)}</div>))}
+                      {expense.split_with.map((s) => (<div key={s.id}>{s.name?.split('-')?.[0]} -  ₹{formatAmount(s.splitAmount)}</div>))}
                     </div>
                   </p>
                   <p className="text-xs text-gray-500">
@@ -326,7 +371,7 @@ function GroupPage() {
                     ).toFixed(2)}%`: " Individual"}
                     
                   </p>
-                  <div className="text-xs text-gray-500">Paid by - {JSON.parse(expense.paid_by ?? '{}')?.name}</div>
+                  <div className="text-xs text-gray-500 font-bold">Paid by - {JSON.parse(expense.paid_by ?? '{}')?.name?.split('-')?.[0]}</div>
                 </div>
               </div>
               <Trash2
@@ -358,6 +403,8 @@ function GroupPage() {
           </label>
         </div>
       )}
+
+      {renderSimplifiedBalances()}
     </div>
   );
 }
