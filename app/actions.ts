@@ -164,7 +164,7 @@ function calculateIndividualShares(expenses: Expense[]): TransactionRecord {
 export async function getGroupData(groupId: string) {
   try {
     const expenses = await sql`
-      SELECT id, amount, description, created_by, split_with, paid_by, split_percentage
+      SELECT id, amount, description, created_by, split_with, paid_by, split_percentage, created_at
       FROM expenses
       WHERE group_id = ${groupId}
       ORDER BY created_at DESC
@@ -267,13 +267,14 @@ export async function getGroupDetails(groupId: string) {
 }
 
 export async function updateGroup(groupId: string, updateData: Partial<GroupData>) {
-  const { name, members } = updateData;
+  const { name, members, admins } = updateData;
 
   try {
     await sql`
       UPDATE groups
       SET name = COALESCE(${name}, name),
-          members = COALESCE(${JSON.stringify(members)}, members)
+          members = COALESCE(${JSON.stringify(members)}, members),
+          admins = COALESCE(${JSON.stringify(admins)}, admins)
       WHERE id = ${groupId}
     `;
 

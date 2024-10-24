@@ -405,7 +405,7 @@ export const AddExpense = () => {
             </Label>
             {members.map(member => (
               <div key={member.id} className="flex items-center space-x-2 mb-2">
-                <Label htmlFor={`split-${member.id}`} className="w-1/3">{member.name}</Label>
+                <Label htmlFor={`split-${member.id}`} className="w-1/3">{member.name?.split('-')?.[0]}</Label>
                 <Input
                   id={`split-${member.id}`}
                   type="number"
