@@ -6,11 +6,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Trash2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { getGroupData, deleteExpense, exportExpenses, importExpenses, getGroupDetails } from '@/app/actions';
+import { getGroupData, deleteExpense, exportExpenses, importExpenses, getGroupDetails, addExpense } from '@/app/actions';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 // Define interfaces for Balance and Expense
 interface Balance {
@@ -24,6 +31,7 @@ interface Expense {
   amount: number;
   description: string;
   created_by: string;
+  created_at: Date;
   split_with: {
     id: string;
     name: string;
@@ -136,7 +144,7 @@ function GroupPage() {
     if (!isAdmin) {
       toast({
         title: 'Error 🚨',
-        description: 'Only admins can delete expenses. ����',
+        description: 'Only admins can delete expenses. ',
         variant: 'destructive',
       });
       return;
@@ -206,6 +214,38 @@ function GroupPage() {
         }
       };
       reader.readAsText(file);
+    }
+  };
+
+  const handleSettle = async (transaction: { from: string; to: string; amount: number }) => {
+    const expenseData = {
+      amount: transaction.amount,
+      description: `Settling with ${transaction.to.split('-')[0]}`,
+      groupId: id as string,
+      splitPercentage: 100,
+      splitWith: [
+        {
+          id: transaction.to,
+          name: transaction.to,
+          amount: transaction.amount
+        }
+      ],
+      createdBy: user?.id as string,
+      paidBy: {
+        id: transaction.from,
+        name: transaction.from
+      }
+    };
+
+    const result = await addExpense(expenseData);
+    if (result.success) {
+      toast({ title: 'Settlement recorded successfully' });
+      // Refresh the page data
+      const { expenses: updatedExpenses, balances: updatedBalances } = await getGroupData(id as string);
+      setExpenses(updatedExpenses as Expense[]);
+      setBalances(updatedBalances as Balance[]);
+    } else {
+      toast({ title: 'Failed to record settlement', variant: 'destructive' });
     }
   };
 
@@ -310,14 +350,43 @@ function GroupPage() {
     }
 
     return (
-      <div>
-        <h3 className="text-xl font-semibold mb-2">Simplified Transactions</h3>
-        {transactions.map((transaction, index) => (
-          <p key={index} className="mb-1">
-            {transaction.from.split('-')[0]} owes ₹{formatAmount(transaction.amount)} to {transaction.to.split('-')[0]}
-          </p>
-        ))}
-      </div>
+      <Accordion type="single" collapsible className="mt-8">
+        <AccordionItem value="simplified-transactions">
+          <AccordionTrigger>
+            <h3 className="text-xl font-semibold underline-offset-0	">Simplified Transactions</h3>
+          </AccordionTrigger>
+          <AccordionContent>
+            {transactions.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>From</TableHead>
+                    <TableHead>To</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{transaction.from.split('-')[0]}</TableCell>
+                      <TableCell>{transaction.to.split('-')[0]}</TableCell>
+                      <TableCell>₹{formatAmount(transaction.amount)}</TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={() => handleSettle(transaction)}>
+                          Settle
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p>No transactions pending</p>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     );
   };
 
@@ -372,6 +441,7 @@ function GroupPage() {
                     
                   </p>
                   <div className="text-xs text-gray-500 font-bold">Paid by - {JSON.parse(expense.paid_by ?? '{}')?.name?.split('-')?.[0]}</div>
+                  <div className="text-xs text-gray-500 font-bold">Created - {expense?.created_at?.toLocaleDateString()}</div>
                 </div>
               </div>
               <Trash2

@@ -24,6 +24,7 @@ function GroupPage() {
   const { id } = useParams();
   const { user, isLoaded: userLoaded } = useUser();
   const [members, setMembers] = useState<string[]>([]);
+  const [defaultMembers, setDefaultMembers] = useState<string[]>([]);
   const [adminMembers, setAdminMembers] = useState<string[]>([]);
   const [groupName, setGroupName] = useState('');
   const [group, setGroup] = useState<Group | null>(null);
@@ -33,15 +34,24 @@ function GroupPage() {
 
   useEffect(() => {
     async function fetchData() {
-
-      if (id && user) {
+      if (id && user && loading) {
+        console.log('aaaa Condition 1',group, {
+          group,
+          id,
+          loading
+        });
+        const defaultGroup = await getGroupDetails('default');
 
         const groupResult = await getGroupDetails(id as string);
-        console.log('aaa', groupResult)
-
         if (groupResult.success && groupResult?.group) {
+          setDefaultMembers(defaultGroup?.group?.members ?? '[]');
           setGroup(groupResult?.group as Group);
+          setGroupName(groupResult?.group?.name ?? '');
+          setMembers(groupResult?.group?.members ?? []);
+          setAdminMembers(groupResult?.group?.admins ?? []);
           setLoading(false)
+  
+          return groupResult?.group
         } else {
           toast({
             title: 'Error',
@@ -54,9 +64,18 @@ function GroupPage() {
     }
 
     if (userLoaded) {
-      fetchData();
+      console.log('aaaa useEffect',userLoaded);
+      fetchData()
     }
-  }, [id, user, userLoaded, toast]);
+  }, [id, user, userLoaded, toast, loading, group])
+
+  console.log('aaaa method',group, {
+    userLoaded,
+    group,
+    defaultMembers,
+    loading
+  });
+
   if (!userLoaded || loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -71,7 +90,7 @@ function GroupPage() {
 
   const isAdmin = group.created_by === user?.id;
 
-
+  console.log('aaaa',defaultMembers);
   const handleUpdateGroup = async () => {
     if (!group) return;
 
@@ -138,7 +157,7 @@ function GroupPage() {
                 Members
               </Label>
               <MultiSelect
-                options={group.members.map((member: any) => ({ label: member, value: member}))}
+                options={defaultMembers.map((member: any) => ({ label: member, value: member}))}
                 defaultValue={group.members.map((member: any) => member)}
                 onValueChange={(selectedIds) => setMembers(selectedIds)}
                 placeholder="Select members"
@@ -153,7 +172,7 @@ function GroupPage() {
                 Admin Members
               </Label>
               <MultiSelect
-                options={JSON.parse(group.admins).map((member: any) => ({ label: member, value: member}))}
+                options={defaultMembers.map((member: any) => ({ label: member, value: member}))}
                 defaultValue={JSON.parse(group.admins).map((member: any) => member)}
                 onValueChange={(selectedIds) => setAdminMembers(selectedIds)}
                 placeholder="Select Members to be admin"

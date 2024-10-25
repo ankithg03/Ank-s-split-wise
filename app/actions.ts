@@ -268,15 +268,17 @@ export async function getGroupDetails(groupId: string) {
 
 export async function updateGroup(groupId: string, updateData: Partial<GroupData>) {
   const { name, members, admins } = updateData;
+  console.log('aaaa updateData',updateData);
 
   try {
-    await sql`
+    const result = await sql`
       UPDATE groups
       SET name = COALESCE(${name}, name),
           members = COALESCE(${JSON.stringify(members)}, members),
           admins = COALESCE(${JSON.stringify(admins)}, admins)
       WHERE id = ${groupId}
     `;
+    console.log('aaaa',result);
 
     return { success: true };
   } catch (error) {
