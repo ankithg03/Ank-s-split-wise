@@ -24,8 +24,9 @@ function InstallPrompt() {
  
   return (
     <div>
-      <h3>Install App</h3>
-      <button>Add to Home Screen</button>
+      <button className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600">
+        Install App
+      </button>
       {isIOS && (
         <p>
           To install this app on your iOS device, tap the share button
@@ -33,7 +34,7 @@ function InstallPrompt() {
             {' '}
             ⎋{' '}
           </span>
-          and then &quot;Add to Home Screen&quot;
+          and then &quot;Install App&quot;
           <span role="img" aria-label="plus icon">
             {' '}
             ➕{' '}
