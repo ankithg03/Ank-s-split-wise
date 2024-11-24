@@ -23,8 +23,8 @@ function InstallPrompt() {
   }
  
   return (
-    <div>
-      <button className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600">
+    <div className='flex justify-center absolute z-[99] w-full mt-4 m-auto'>
+      <button className="hover:bg-purple-800  bg-purple-600  text-white p-2 rounded-lg">
         Install App
       </button>
       {isIOS && (
