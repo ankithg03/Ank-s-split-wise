@@ -23,7 +23,7 @@ function InstallPrompt() {
   }
  
   return (
-    <div className='flex justify-center absolute z-[99] w-full mt-4 m-auto'>
+    <div className='flex justify-center my-4 m-auto'>
       <button className="hover:bg-purple-800  bg-purple-600  text-white p-2 rounded-lg">
         Install App
       </button>
