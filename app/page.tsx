@@ -23,9 +23,9 @@ function InstallPrompt() {
   }
  
   return (
-    <div className='flex justify-center my-4 m-auto'>
+    <div className='py-4'>
       <h3>Install App</h3>
-      <button className='hover:bg-purple-800  bg-purple-600  text-white p-2 rounded-lg'>Add to Home Screen</button>
+      <button>Add to Home Screen</button>
       {isIOS && (
         <p>
           To install this app on your iOS device, tap the share button
