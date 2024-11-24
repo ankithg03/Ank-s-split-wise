@@ -24,9 +24,7 @@ function InstallPrompt() {
  
   return (
     <div className='flex justify-center my-4 m-auto'>
-      <button className="hover:bg-purple-800  bg-purple-600  text-white p-2 rounded-lg">
-        Install App
-      </button>
+      <button className='hover:bg-purple-800  bg-purple-600  text-white p-2 rounded-lg'>Add to Home Screen</button>
       {isIOS && (
         <p>
           To install this app on your iOS device, tap the share button
@@ -34,7 +32,7 @@ function InstallPrompt() {
             {' '}
             ⎋{' '}
           </span>
-          and then &quot;Install App&quot;
+          and then &quot;Add to Home Screen&quot;
           <span role="img" aria-label="plus icon">
             {' '}
             ➕{' '}
