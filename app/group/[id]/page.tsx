@@ -104,8 +104,11 @@ function GroupPage() {
     return <div>Group not found</div>;
   }
 
-  const isAdmin = group.created_by === user?.id;
-
+  const userEmail = user?.primaryEmailAddress?.emailAddress
+  const admin = group.members?.find((admin: any) => {
+    return admin.includes(userEmail)
+  })
+  const isAdmin = group.created_by === user?.id || admin;
 
   const groupDescription =
     "View and manage the details of your group. You can see the group's name, balances, and expenses. As an admin, you can also delete expenses.";
