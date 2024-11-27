@@ -10,16 +10,20 @@ const isPublicRoute = createRouteMatcher([
   // Add any other public routes as needed
 ]);
 
-export default clerkMiddleware((auth, request) => {
+export default clerkMiddleware(async (auth, request) => {
   if (!isPublicRoute(request)) {
-    auth().protect();
+    const authentication = await auth()
+    console.log('aaa', authentication)
+    if (!authentication.userId) {
+      authentication.redirectToSignIn()
+    }
   }
 });
 
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx|json?|xlsx?|zip|webmanifest|manifest)).*)',
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|json|png|gif|svg|ttf|woff2?|ico|csv|docx|json?|xlsx?|zip|webmanifest|manifest)).*)',
     // Always run for API routes
     '/(api|trpc)(.*)',
   ],

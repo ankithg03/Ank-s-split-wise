@@ -23,7 +23,7 @@ function InstallPrompt() {
   }
  
   return (
-    <div className='py-4'>
+    <div className='grid justify-center text-center bg-gradient-to-r from-purple-400 to-pink-600 pt-4'>
       <h3>Install App</h3>
       <button>Add to Home Screen</button>
       {isIOS && (

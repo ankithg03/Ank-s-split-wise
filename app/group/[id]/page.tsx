@@ -390,6 +390,11 @@ function GroupPage() {
     );
   };
 
+  const totalAmount = expenses.reduce((sum, currentItem) => {
+    const num = currentItem?.description.includes('Settling with') ? 0 : Number(currentItem.amount || 0) 
+    return sum + num;
+  }, 0);
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -409,6 +414,7 @@ function GroupPage() {
         </div>
       </div>
       <p className="text-gray-600 mb-8">{groupDescription}</p>
+      <h2 className="text-2xl font-semibold mb-4">Total Spend: {totalAmount.toFixed(2)}</h2>
 
       <h2 className="text-2xl font-semibold mb-4">Balances</h2>
       {renderBalances()}
