@@ -35,11 +35,6 @@ function GroupPage() {
   useEffect(() => {
     async function fetchData() {
       if (id && user && loading) {
-        console.log('aaaa Condition 1',group, {
-          group,
-          id,
-          loading
-        });
         const defaultGroup = await getGroupDetails('default');
 
         const groupResult = await getGroupDetails(id as string);
@@ -64,17 +59,9 @@ function GroupPage() {
     }
 
     if (userLoaded) {
-      console.log('aaaa useEffect',userLoaded);
       fetchData()
     }
   }, [id, user, userLoaded, toast, loading, group])
-
-  console.log('aaaa method',group, {
-    userLoaded,
-    group,
-    defaultMembers,
-    loading
-  });
 
   if (!userLoaded || loading) {
     return (
@@ -87,10 +74,13 @@ function GroupPage() {
   if (!group) {
     return <div>Group not found</div>;
   }
+  const userEmail = user?.primaryEmailAddress?.emailAddress
+  const admin = JSON.parse(group.admins)?.find((admin: any) => {
+    return admin.includes(userEmail)
+  }) 
+  const isAdmin = group.created_by === user?.id || admin;
+  
 
-  const isAdmin = group.created_by === user?.id;
-
-  console.log('aaaa',defaultMembers);
   const handleUpdateGroup = async () => {
     if (!group) return;
 

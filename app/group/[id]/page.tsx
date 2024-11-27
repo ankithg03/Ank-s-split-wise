@@ -317,7 +317,6 @@ function GroupPage() {
       );
     });
   };    
-  console.log('aaa',balances)
 
 
   const renderSimplifiedBalances = () => {
