@@ -277,6 +277,7 @@ export async function updateGroup(groupId: string, updateData: Partial<GroupData
           admins = COALESCE(${JSON.stringify(admins)}, admins)
       WHERE id = ${groupId}
     `;
+    console.log('aaaa',result);
 
     return { success: true };
   } catch (error) {
