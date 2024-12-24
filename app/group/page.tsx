@@ -13,6 +13,7 @@ export default function CreateGroup() {
   const [groupName, setGroupName] = useState('');
   const [invitedMembers, setInvitedMembers] = useState<string[]>([]);
   const [adminMembers, setAdminMembers] = useState<string[]>([]);
+  const [useExistingUsers, setUseExistingUsers] = useState(false);
 
   const [members, setMembers] = useState([]);
 
@@ -109,7 +110,8 @@ export default function CreateGroup() {
           />
         </div>
 
-        <div>
+        {useExistingUsers ? (<>
+          <div>
           <label
             htmlFor="inviteMembers"
             className="block text-sm font-medium text-gray-700 mb-1"
@@ -136,6 +138,27 @@ export default function CreateGroup() {
             placeholder="Select members to become admins"
             className="w-full"
           />
+        </div>
+        
+        </>):''}
+        <div>
+          <label
+            htmlFor="useExistingUsers"
+            className="block text-sm font-medium text-gray-700 mb-1 custom-checkbox"
+          >
+          <input
+            type="checkbox"
+            id="useExistingUsers"
+            name="useExistingUsers"
+            checked={useExistingUsers}
+            onChange={(e) => setUseExistingUsers(e.target.checked)}
+            className="w-full"
+          />
+          <div>
+            Use existing users
+            </div>
+          </label>
+         
         </div>
 
         {invitedMembers.length > 0 && (

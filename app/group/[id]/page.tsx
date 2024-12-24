@@ -403,6 +403,11 @@ function GroupPage() {
         <h1 className="text-3xl font-bold mb-4">{group.name}</h1>
 
         <div className='flex gap-4'>
+        <Link href={"/group/addUser/" + id}>
+            <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
+              Add Users
+            </Button>
+          </Link>
           <Link href={"/group/manage/" + id}>
             <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
               Manage

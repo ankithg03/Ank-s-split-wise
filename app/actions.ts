@@ -313,3 +313,58 @@ export async function getUserGroups(userId: string) {
     return { success: false, error: 'Failed to fetch user groups' };
   }
 }
+
+export async function addUserToGroup(groupId: string, name: string, email: string) {
+  try {
+    // Fetch the current members of the group
+    const currentGroup = await sql`
+      SELECT members FROM groups WHERE id = ${groupId}
+    `;
+
+    if (currentGroup.length === 0) {
+      return { success: false, error: 'Group not found' };
+    }
+    console.log('aaa', currentGroup[0].members, typeof(currentGroup[0].members))
+
+    const members = currentGroup[0].members; // Parse the existing members
+    const newMember = `${name} - ${email}`; // Format the new member string
+
+    // Check if the user already exists
+    if (members.includes(newMember)) {
+      return { success: false, error: 'User already exists in the group' };
+    }
+
+    // Add the new member to the list
+    members.push(newMember);
+
+    // Update the group with the new members list
+    await sql`
+      UPDATE groups
+      SET members = ${JSON.stringify(members)}
+      WHERE id = ${groupId}
+    `;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding user to group:', error);
+    return { success: false, error: 'Failed to add user to group' };
+  }
+}
+
+export async function fetchGroupMembers(groupId: string) {
+  try {
+    const currentGroup = await sql`
+      SELECT members FROM groups WHERE id = ${groupId}
+    `;
+
+    if (currentGroup.length === 0) {
+      return { success: false, error: 'Group not found' };
+    }
+
+    const members = currentGroup[0].members; // Parse the existing members
+    return { success: true, members }; // Return the members
+  } catch (error) {
+    console.error('Error fetching group members:', error);
+    return { success: false, error: 'Failed to fetch group members' };
+  }
+}

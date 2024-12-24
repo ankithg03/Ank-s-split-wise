@@ -32,6 +32,8 @@ function GroupPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const defaultUsers = Array.from(new Set([...defaultMembers, ...(group?.members || [])]));
+  
   useEffect(() => {
     async function fetchData() {
       if (id && user && loading) {
@@ -147,7 +149,7 @@ function GroupPage() {
                 Members
               </Label>
               <MultiSelect
-                options={defaultMembers.map((member: any) => ({ label: member, value: member}))}
+                options={defaultUsers.map((member: any) => ({ label: member, value: member}))}
                 defaultValue={group.members.map((member: any) => member)}
                 onValueChange={(selectedIds) => setMembers(selectedIds)}
                 placeholder="Select members"
@@ -162,7 +164,7 @@ function GroupPage() {
                 Admin Members
               </Label>
               <MultiSelect
-                options={defaultMembers.map((member: any) => ({ label: member, value: member}))}
+                options={defaultUsers.map((member: any) => ({ label: member, value: member}))}
                 defaultValue={JSON.parse(group.admins).map((member: any) => member)}
                 onValueChange={(selectedIds) => setAdminMembers(selectedIds)}
                 placeholder="Select Members to be admin"
