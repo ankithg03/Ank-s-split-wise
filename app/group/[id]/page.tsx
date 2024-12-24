@@ -399,10 +399,10 @@ function GroupPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+      <div className="grid md:flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold mb-4">{group.name}</h1>
 
-        <div className='flex gap-4'>
+        <div className='grid grid-cols-2 md:flex gap-4'>
         <Link href={"/group/addUser/" + id}>
             <Button className="bg-purple-600 text-white px-4 py-2 rounded-md">
               Add Users
