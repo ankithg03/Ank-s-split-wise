@@ -100,8 +100,10 @@ export async function addExpense(expenseData: ExpenseData) {
 
 function calculateIndividualShares(expenses: Expense[]): TransactionRecord {
   const transactions: TransactionRecord = {};
-
-  expenses.forEach(expense => {
+  const balanceData = expenses.filter((exp)=>{
+      return !exp.description.includes('Settling')
+  })
+  balanceData.forEach(expense => {
       const paidByEmail = JSON.parse(expense.paid_by).id; // Parse the JSON string to get the email
       const splitAmount = expense.split_with;
 

@@ -60,6 +60,7 @@ function GroupPage() {
   const router = useRouter();
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [exlcudeSettleExpenses, setExlcudeSettleExpenses] = useState<Expense[]>([]);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,12 +80,16 @@ function GroupPage() {
           });
           return;
         }
-
         const { expenses, balances } = await getGroupData(
           id as string
         );
+        console.log('aaa', expenses)
+        const exExpense = expenses.filter(exp=>{
+          return exp.description.includes('Settling')
+        })
         setExpenses(expenses as Expense[]);
         setBalances(balances as Balance[]);
+        setExlcudeSettleExpenses(exExpense as Expense[]);
         setLoading(false);
       }
     }
