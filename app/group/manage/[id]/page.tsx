@@ -77,7 +77,13 @@ function GroupPage() {
     return <div>Group not found</div>;
   }
   const userEmail = user?.primaryEmailAddress?.emailAddress
-  const admin = JSON.parse(group.admins)?.find((admin: any) => {
+  let admins = JSON.parse(group.admins) ?? []
+
+  if (typeof admins == "string") {
+    admins = JSON.parse(admins)
+  }
+
+  const admin = admins?.find((admin: any) => {
     return admin.includes(userEmail)
   }) 
   const isAdmin = group.created_by === user?.id || admin;
@@ -85,11 +91,11 @@ function GroupPage() {
 
   const handleUpdateGroup = async () => {
     if (!group) return;
-
+    const admins = typeof adminMembers === "string" ? JSON.parse(adminMembers) : adminMembers
     const updateData = {
       name: groupName,
       members: members,
-      admins: adminMembers,
+      admins: admins,
     };
 
     const result = await updateGroup(group.id, updateData);
@@ -165,7 +171,7 @@ function GroupPage() {
               </Label>
               <MultiSelect
                 options={defaultUsers.map((member: any) => ({ label: member, value: member}))}
-                defaultValue={JSON.parse(group.admins).map((member: any) => member)}
+                defaultValue={admins.map((member: any) => member)}
                 onValueChange={(selectedIds) => setAdminMembers(selectedIds)}
                 placeholder="Select Members to be admin"
                 disabled={!group}
