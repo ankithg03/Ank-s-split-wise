@@ -1,0 +1,9 @@
+{
+  "name": "SplitWisely",
+  "short_name": "SplitWisely",
+  "description": "Split your expenses with your friends",
+  "manifest": "/manifest.json",
+  "theme_color": "#8936FF",
+  "background_color": "#FAFAFA"
+}
+

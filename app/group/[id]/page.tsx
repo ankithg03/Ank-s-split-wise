@@ -83,13 +83,14 @@ function GroupPage() {
         const { expenses, balances } = await getGroupData(
           id as string
         );
-        console.log('aaa', expenses)
         const exExpense = expenses.filter(exp=>{
           return exp.description.includes('Settling')
         })
         setExpenses(expenses as Expense[]);
         setBalances(balances as Balance[]);
         setExlcudeSettleExpenses(exExpense as Expense[]);
+        console.log('aaa', exExpense)
+
         setLoading(false);
       }
     }
@@ -226,6 +227,7 @@ function GroupPage() {
   };
 
   const handleSettle = async (transaction: { from: string; to: string; amount: number }) => {
+
     const expenseData = {
       amount: transaction.amount,
       description: `Settling with ${transaction.to.split('-')[0]}`,
@@ -329,7 +331,6 @@ function GroupPage() {
 
   const renderSimplifiedBalances = () => {
     const simplifiedBalances: { [key: string]: number } = {};
-
     // Calculate net balance for each person
     Object.entries(balances).forEach(([name, balance]) => {
       const totalOwes = Object.values(balance.owes).reduce((sum, amount) => sum + (amount as any ), 0);
