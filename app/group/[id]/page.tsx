@@ -460,12 +460,7 @@ function GroupPage() {
                     .sort((a, b) => b[1].total - a[1].total);
                   if (sorted.length === 0) return <li className="text-gray-400 italic">No data</li>;
                   // Add color classes for top 3
-                  const colorClasses = [
-                    "bg-gradient-to-r from-yellow-300 to-yellow-100 text-yellow-900",
-                    "bg-gradient-to-r from-gray-200 to-gray-100 text-gray-700",
-                    "bg-gradient-to-r from-orange-200 to-orange-100 text-orange-700"
-                  ];
-                  return sorted.map(([id, { name, total }], idx) => (
+                  return sorted.map(([id, { name, total }]) => (
                     <li
                       key={id}
                       className={`flex justify-between items-center mb-2 px-3 py-2 rounded-lg ${
