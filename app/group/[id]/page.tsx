@@ -64,7 +64,9 @@ function GroupPage() {
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-
+  const excludedSettledAmount = expenses.filter((exp)=>{
+    return !exp?.description.includes('Settling with')
+  })
   useEffect(() => {
     async function fetchData() {
       if (id && user) {
@@ -421,7 +423,183 @@ function GroupPage() {
         </div>
       </div>
       <p className="text-gray-600 mb-8">{groupDescription}</p>
-      <h2 className="text-2xl font-semibold mb-4">Total Spend: {totalAmount.toFixed(2)}</h2>
+      <div className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
+          <h2 className="text-2xl font-bold text-purple-700 flex items-center">
+            Total Spend:
+          </h2>
+          <span className="text-2xl font-bold text-blue-600 px-4 py-1 rounded-lg ">
+            ₹{totalAmount.toFixed(2)}
+          </span>
+        </div>
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl shadow-lg p-6">
+          <h2 className="text-2xl font-semibold mb-6 text-purple-800 flex items-center gap-2">
+            <svg className="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 1.343-3 3 0 1.657 1.343 3 3 3s3-1.343 3-3c0-1.657-1.343-3-3-3zm0 10c-4.418 0-8-3.582-8-8 0-4.418 3.582-8 8-8s8 3.582 8 8c0 4.418-3.582 8-8 8z"></path></svg>
+            Spent Analysis
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Top Spenders */}
+            <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg shadow p-5 border border-purple-200">
+              <h3 className="font-semibold mb-3 text-purple-700 text-lg flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 17.75L18.518 21l-1.671-7.162L22 9.75l-7.19-.617L12 2.5l-2.81 6.633L2 9.75l5.153 4.088L5.482 21z"></path></svg>
+                Top Spenders
+              </h3>
+              <ul>
+                {(() => {
+                  // Calculate total spent by each user
+                  const spendMap: { [email: string]: { name: string, total: number } } = {};
+                  excludedSettledAmount.forEach(exp => {
+                    const paidBy = JSON.parse(exp.paid_by ?? '{}');
+                    if (!paidBy?.id) return;
+                    if (!spendMap[paidBy.id]) {
+                      spendMap[paidBy.id] = { name: paidBy.name?.split('-')[0] || paidBy.id, total: 0 };
+                    }
+                    spendMap[paidBy.id].total += Number(exp.amount || 0);
+                  });
+                  const sorted = Object.entries(spendMap)
+                    .sort((a, b) => b[1].total - a[1].total);
+                  if (sorted.length === 0) return <li className="text-gray-400 italic">No data</li>;
+                  // Add color classes for top 3
+                  const colorClasses = [
+                    "bg-gradient-to-r from-yellow-300 to-yellow-100 text-yellow-900",
+                    "bg-gradient-to-r from-gray-200 to-gray-100 text-gray-700",
+                    "bg-gradient-to-r from-orange-200 to-orange-100 text-orange-700"
+                  ];
+                  return sorted.map(([id, { name, total }], idx) => (
+                    <li
+                      key={id}
+                      className={`flex justify-between items-center mb-2 px-3 py-2 rounded-lg ${
+                        "bg-white"
+                      } shadow-sm`}
+                    >
+                      <span className="font-medium">{name}</span>
+                      <span className="font-bold">₹{formatAmount(total)}</span>
+                    </li>
+                  ));
+                })()}
+              </ul>
+            </div>
+            {/* Most Frequent Expense Types */}
+            <div className="bg-gradient-to-br from-pink-100 to-pink-200 rounded-lg shadow p-5 border border-pink-200">
+              <h3 className="font-semibold mb-3 text-pink-700 text-lg flex items-center gap-2">
+                <svg className="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 17v-2a4 4 0 0 1 8 0v2M5 21h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-10 0v3H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2z"></path></svg>
+                Most Frequent Expense Types
+              </h3>
+              <ul>
+                {(() => {
+                  // Define sector keywords and mapping
+                  const SECTOR_KEYWORDS: { [sector: string]: string[] } = {
+                    "Food & Dining": [
+                      "food", "dinner", "lunch", "breakfast", "restaurant", "pizza", "cafe", "snack", "meal", "eat", "drinks", "coffee", "tea", "bar", "beverage"
+                    ],
+                    "Travel & Transport": [
+                      "uber", "taxi", "cab", "bus", "train", "flight", "airfare", "travel", "transport", "metro", "auto", "car", "fuel", "petrol", "diesel", "ticket", "ride"
+                    ],
+                    "Groceries": [
+                      "grocery", "groceries", "supermarket", "mart", "vegetable", "fruit", "milk", "bread", "eggs", "provision", "store"
+                    ],
+                    "Shopping": [
+                      "shopping", "clothes", "apparel", "shoes", "dress", "mall", "purchase", "accessory", "bag", "gift"
+                    ],
+                    "Utilities & Bills": [
+                      "electricity", "water", "bill", "wifi", "internet", "recharge", "mobile", "gas", "utility", "rent"
+                    ],
+                    "Entertainment": [
+                      "movie", "cinema", "netflix", "prime", "entertainment", "game", "concert", "show", "event", "party"
+                    ],
+                    "Home & Living": [
+                      "furniture", "appliance", "repair", "cleaning", "home", "maintenance", "decor", "kitchen"
+                    ],
+                    "Health & Wellness": [
+                      "medicine", "doctor", "pharmacy", "hospital", "health", "wellness", "clinic", "medical"
+                    ],
+                    "Education": [
+                      "book", "tuition", "course", "education", "school", "college", "exam", "study"
+                    ],
+                    "Other": []
+                  };
+
+                  // Helper to assign a sector based on description
+                  function getSector(desc: string) {
+                    if (!desc) return "Other";
+                    const norm = desc.toLowerCase();
+                    for (const [sector, keywords] of Object.entries(SECTOR_KEYWORDS)) {
+                      if (sector === "Other") continue;
+                      for (const kw of keywords) {
+                        // Match whole word or substring
+                        if (norm.includes(kw)) return sector;
+                      }
+                    }
+                    return "Other";
+                  }
+
+                  // Count frequency and total amount per sector
+                  const sectorMap: { [sector: string]: { count: number, total: number, examples: Set<string> } } = {};
+                  excludedSettledAmount.forEach(exp => {
+                    const desc = exp.description || "Other";
+                    const sector = getSector(desc);
+                    if (!sectorMap[sector]) {
+                      sectorMap[sector] = { count: 0, total: 0, examples: new Set() };
+                    }
+                    sectorMap[sector].count += 1;
+                    sectorMap[sector].total += Number(exp.amount || 0);
+                    sectorMap[sector].examples.add(desc);
+                  });
+
+                  // Sort by count, then by total amount
+                  const sorted = Object.entries(sectorMap)
+                    .sort((a, b) => b[1].count - a[1].count || b[1].total - a[1].total)
+                    .slice(0, 3);
+
+                  // Color classes for sectors
+                  const sectorColors: { [sector: string]: string } = {
+                    "Food & Dining": "bg-gradient-to-r from-green-200 to-green-100 text-green-900",
+                    "Travel & Transport": "bg-gradient-to-r from-blue-200 to-blue-100 text-blue-900",
+                    "Groceries": "bg-gradient-to-r from-lime-200 to-lime-100 text-lime-900",
+                    "Shopping": "bg-gradient-to-r from-pink-200 to-pink-100 text-pink-900",
+                    "Utilities & Bills": "bg-gradient-to-r from-gray-200 to-gray-100 text-gray-900",
+                    "Entertainment": "bg-gradient-to-r from-yellow-200 to-yellow-100 text-yellow-900",
+                    "Home & Living": "bg-gradient-to-r from-indigo-200 to-indigo-100 text-indigo-900",
+                    "Health & Wellness": "bg-gradient-to-r from-red-200 to-red-100 text-red-900",
+                    "Education": "bg-gradient-to-r from-purple-200 to-purple-100 text-purple-900",
+                    "Other": "bg-gradient-to-r from-slate-200 to-slate-100 text-slate-900"
+                  };
+
+                  if (sorted.length === 0) return <li className="text-gray-400 italic">No data</li>;
+                  return sorted.map(([sector, { count, total, examples }]) => {
+                    const exampleArr = Array.from(examples);
+                    const shortExamples = exampleArr.slice(0, 2).join(", ");
+                    const hasMore = examples.size > 2;
+                    const tooltipText = exampleArr.join(", ");
+                    return (
+                      <li
+                        key={sector}
+                        className={`flex justify-between items-center mb-2 px-3 py-2 rounded-lg shadow-sm ${sectorColors[sector] || "bg-white"}`}
+                      >
+                        <span>
+                          <span className="font-semibold">{sector}</span>
+                          <span
+                            className="ml-2 text-xs text-gray-600"
+                            style={hasMore ? { cursor: "pointer", textDecoration: "underline dotted" } : {}}
+                            title={hasMore ? tooltipText : undefined}
+                          >
+                            {shortExamples}
+                            {hasMore ? "..." : ""}
+                          </span>
+                        </span>
+                        <span className="flex flex-col items-end">
+                          <span className="font-bold">{count}x</span>
+                          <span className="text-xs text-gray-700">₹{formatAmount(total)}</span>
+                        </span>
+                      </li>
+                    );
+                  });
+                })()}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <h2 className="text-2xl font-semibold mb-4">Balances</h2>
       {renderBalances()}
